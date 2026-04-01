@@ -1,0 +1,16 @@
+# Nim build artifacts
+nimcache/
+*.out
+
+# Compiled test/fuzz binaries
+tests/t_bindings
+tests/t_tls_client
+tests/t_stress
+fuzz/bin/
+
+# Fuzz artifacts
+fuzz/bin/
+fuzz/crashes/
+fuzz/log_*.txt
+fuzz/corpus_x509/
+fuzz/corpus_read/

@@ -4,7 +4,7 @@ Nim wrapper for [mbedTLS](https://github.com/Mbed-TLS/mbedtls) 3.x — TLS clien
 
 ## Status
 
-**Scaffolded** — Low-level FFI bindings are declared, high-level API is stubbed. Not yet functional.
+**Functional** — Low-level FFI bindings and high-level `TlsContext` API are implemented and tested.
 
 ## Design
 
@@ -15,26 +15,24 @@ Two layers:
 
 ## Linking
 
-Dynamic linking by default (links against system `libmbedtls.so`). Use `-d:mbedtlsStatic` for static linking.
+Links against system mbedTLS libraries (`libmbedtls`, `libmbedx509`, `libmbedcrypto`). Dynamic by default; for static linking, ensure only static libraries (`.a` / `.lib`) are in your library search path.
 
-```bash
-# Dynamic (default) — requires libmbedtls.so at runtime
-nim c myapp.nim
-
-# Static — requires libmbedtls.a at compile time
-nim c -d:mbedtlsStatic myapp.nim
-```
-
-## Usage (planned)
+## Usage
 
 ```nim
 import mbedtls
 
-var ctx = newTlsContext()
+var ctx = newTlsContext(caFile = "/etc/ssl/ca-bundle.pem")
 ctx.connect("example.com", 443)
 ctx.write("GET / HTTP/1.0\r\nHost: example.com\r\n\r\n")
 echo ctx.read()
 ctx.close()
+```
+
+Skip certificate verification (development/testing only):
+
+```nim
+var ctx = newTlsContext(verify = false)
 ```
 
 ## Requirements

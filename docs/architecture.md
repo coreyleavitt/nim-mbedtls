@@ -8,7 +8,7 @@ nim-mbedtls is a two-layer Nim wrapper for mbedTLS 3.x: low-level FFI bindings a
 Application code
        |
   +----v----+
-  | mbedtls |  High-level: TlsContext, TlsConfig, connect/read/write/close
+  | mbedtls |  High-level: TlsContext, connect/read/write/close
   +----+----+
        |
   +----v-----------+
@@ -39,6 +39,7 @@ Direct `importc` declarations matching mbedTLS 3.x headers. Each mbedTLS module 
 | `mbedtls/entropy.nim` | `<mbedtls/entropy.h>` | Entropy collection for RNG |
 | `mbedtls/ctr_drbg.nim` | `<mbedtls/ctr_drbg.h>` | Deterministic random bit generator |
 | `mbedtls/x509_crt.nim` | `<mbedtls/x509_crt.h>` | X.509 certificate parsing and verification |
+| `mbedtls/error.nim` | `<mbedtls/error.h>` | Error code to string translation |
 
 **Type mapping:**
 - Opaque C structs → Nim objects with `{.importc, incompleteStruct.}` pragma (always used by pointer)
@@ -65,13 +66,16 @@ A `TlsContext` object that owns all the mbedTLS state needed for a TLS client co
 ```nim
 type
   TlsContext* = object
-    ssl: SslContext
-    net: NetContext
-    entropy: EntropyContext
-    ctrDrbg: CtrDrbgContext
-    conf: SslConfig
-    cacert: X509Crt
+    state: TlsState
+    ssl: ptr SslContext
+    net: ptr NetContext
+    entropy: ptr EntropyContext
+    ctrDrbg: ptr CtrDrbgContext
+    conf: ptr SslConfig
+    cacert: ptr X509Crt
 ```
+
+Sub-contexts are heap-allocated via `create()` because `incompleteStruct` types have unknown size to Nim. `TlsContext` is a move-only value type (`=copy` is disabled).
 
 **Lifecycle:**
 1. `newTlsContext()` — Initialize all sub-contexts, seed RNG, configure defaults
@@ -87,22 +91,19 @@ The mbedTLS initialization sequence requires wiring multiple contexts together (
 
 ### Why destructors for cleanup
 
-`=destroy` on `TlsContext` calls the `_free` functions in reverse initialization order. This prevents resource leaks when the context goes out of scope, even on exception paths. Users of the low-level API manage lifetime manually, same as in C.
+`=destroy` on `TlsContext` calls the `_free` functions in reverse dependency order (ssl first, since it holds references to conf and net, then the contexts it depends on). This prevents resource leaks when the context goes out of scope, even on exception paths. Users of the low-level API manage lifetime manually, same as in C.
 
 ## Linking strategy
 
 ### What we chose
 
-Compile-time flag controls linking mode:
+The library links against system mbedTLS via standard `-l` flags:
 
 ```nim
-when defined(mbedtlsStatic):
-  {.passL: "-lmbedtls -lmbedx509 -lmbedcrypto".}  # static archives
-else:
-  {.passL: "-lmbedtls -lmbedx509 -lmbedcrypto".}  # shared libraries (default)
+{.passL: "-lmbedtls -lmbedx509 -lmbedcrypto".}
 ```
 
-For static linking, the consumer must have mbedTLS static libraries (`.a` files) in the library search path. For dynamic linking, the shared libraries must be available at runtime.
+The linker resolves these to shared (`.so` / `.dylib`) or static (`.a` / `.lib`) libraries based on what is available in the library search path. No compile-time flag is needed — static vs dynamic is controlled by the build environment.
 
 ### Why not always static
 

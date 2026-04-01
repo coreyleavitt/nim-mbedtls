@@ -20,10 +20,10 @@ mbedTLS has a large, nuanced API surface (client certs, custom BIO, DTLS, PSK, s
 
 ## Flexible linking: dynamic or static
 
-The default is dynamic linking against system `libmbedtls.so`, `libmbedx509.so`, and `libmbedcrypto.so`. Compile with `-d:mbedtlsStatic` to statically link instead.
+The library links against system `libmbedtls`, `libmbedx509`, and `libmbedcrypto` via standard `-l` flags. Static vs dynamic linking is controlled by the build environment (which library files are in the search path), not by a compile-time flag.
 
-- **Dynamic (default)**: Zero binary size cost when mbedTLS is already on the system (e.g., OpenWrt base packages). Automatically picks up system security patches.
-- **Static (`-d:mbedtlsStatic`)**: Self-contained binary with no runtime dependency on system mbedTLS. Useful for non-OpenWrt targets, Docker containers, or environments where the system library version can't be controlled.
+- **Dynamic**: Zero binary size cost when mbedTLS is already on the system (e.g., OpenWrt base packages). Automatically picks up system security patches. Ensure `.so` / `.dylib` files are available at runtime.
+- **Static**: Self-contained binary with no runtime dependency. Ensure only `.a` / `.lib` files are in the library search path at build time.
 
 Both modes use the same API — the linking choice is invisible to application code.
 

@@ -1,0 +1,3 @@
+FROM opensuse/tumbleweed
+RUN zypper --non-interactive install nim mbedtls-devel clang libstdc++-devel ca-certificates-mozilla
+WORKDIR /work
