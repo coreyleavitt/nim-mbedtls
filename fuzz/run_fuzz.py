@@ -76,10 +76,11 @@ def build(target: dict):
     return binary
 
 
-def run_target(target: dict, binary: Path, timeout: int, max_len: int) -> subprocess.Popen:
+def run_target(target: dict, binary: Path, timeout: int, max_len: int):
     """Launch a fuzzer process (non-blocking)."""
     effective_max_len = target["max_len"] or max_len
-    log_file = FUZZ_DIR / f"log_{target['name']}.txt"
+    log_path = FUZZ_DIR / f"log_{target['name']}.txt"
+    target["corpus"].mkdir(parents=True, exist_ok=True)
     cmd = [
         str(binary), str(target["corpus"]),
         f"-artifact_prefix={CRASH_DIR / target['name']}_",
@@ -87,13 +88,17 @@ def run_target(target: dict, binary: Path, timeout: int, max_len: int) -> subpro
         f"-max_len={effective_max_len}",
         "-print_final_stats=1",
     ]
-    fh = open(log_file, "w")
-    return subprocess.Popen(cmd, stdout=fh, stderr=subprocess.STDOUT), fh, log_file
+    fh = open(log_path, "w")
+    proc = subprocess.Popen(cmd, stdout=fh, stderr=subprocess.STDOUT)
+    return proc, fh, log_path
 
 
 def print_summary(log_path: Path, name: str):
     """Print the last few lines of a fuzzer log."""
     print(f"\n=== {name} results ===")
+    if not log_path.exists():
+        print(f"  (no log file at {log_path})")
+        return
     lines = log_path.read_text().splitlines()
     for line in lines[-6:]:
         print(f"  {line}")
